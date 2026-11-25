@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="icon" href="data:,">
+<title>Simulador de casa</title>
+<script type="importmap">{"imports":{"three":"./lib/three.module.js"}}</script>
+<style>
+:root{--bg:rgba(24,28,36,.86);--fg:#eef2f7;--mut:#9aa6b6;--acc:#35e06a;--line:rgba(255,255,255,.12)}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:#cfe2f0;font:13px/1.35 system-ui,Segoe UI,sans-serif;color:var(--fg);user-select:none}
+#app,#app canvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+button,input{font:inherit;color:inherit}
+button{background:rgba(255,255,255,.07);border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer;transition:background .12s}
+button:hover{background:rgba(255,255,255,.16)}
+button.on{background:var(--acc);color:#07230f;border-color:transparent;font-weight:600}
+.bar{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);display:flex;gap:10px;align-items:stretch;padding:8px;background:var(--bg);backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:14px;max-width:calc(100vw - 20px);flex-wrap:wrap;justify-content:center}
+.grp{display:flex;gap:4px;align-items:center;padding:0 6px;border-right:1px solid var(--line)}
+.grp:last-child{border:0}
+.grp .lbl{font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:.06em;margin-right:4px;writing-mode:vertical-rl;transform:rotate(180deg)}
+.mode{display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 9px;min-width:62px}
+.mode svg{width:34px;height:24px}
+.mode small{font-size:10px;opacity:.85}
+.top{position:fixed;left:12px;top:12px;max-width:330px;background:var(--bg);backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.top h1{font-size:14px;margin:0 0 2px}
+.top .m{color:var(--acc);font-weight:600}
+#help{margin-top:8px;color:var(--mut);font-size:12px}
+#help b{color:var(--fg);font-weight:600}
+#help div{margin:2px 0}
+.hidden{display:none!important}
+.side{position:fixed;right:12px;top:12px;bottom:90px;width:250px;background:var(--bg);backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:12px;padding:10px 12px;overflow:auto;display:none}
+body.edit .side{display:block}
+.side h2{font-size:13px;margin:0 0 6px}
+.cat{margin:10px 0 4px;color:var(--mut);font-size:10px;text-transform:uppercase;letter-spacing:.07em}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chips button{padding:4px 8px;font-size:12px}
+.row{display:flex;gap:6px;align-items:center;margin:6px 0;flex-wrap:wrap}
+input[type=number]{width:70px;background:rgba(0,0,0,.35);border:1px solid var(--line);border-radius:6px;padding:4px 6px}
+label{display:flex;gap:6px;align-items:center;color:var(--mut)}
+.sel{border:1px solid var(--acc);border-radius:10px;padding:8px;margin-bottom:8px;background:rgba(53,224,106,.07)}
+.sel b{color:var(--acc)}
+.tip{color:var(--mut);font-size:11px;margin-top:8px}
+#stick{position:fixed;left:18px;bottom:calc(96px + env(safe-area-inset-bottom));width:120px;height:120px;border-radius:50%;background:rgba(24,28,36,.45);border:2px solid rgba(255,255,255,.35);display:none;touch-action:none}
+#knob{position:absolute;left:35px;top:35px;width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.85);box-shadow:0 2px 8px rgba(0,0,0,.35)}
+html{-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none}
+body.touch #stick{display:block}
+body.fp #btnEdit{opacity:.4}
+@media (pointer:coarse){button{min-height:40px}.chips button{padding:8px 12px}input[type=number]{width:84px;padding:8px}}
+@media (max-width:760px){
+  .top{max-width:calc(100vw - 24px);padding:6px 10px}.top h1{display:none}
+  .bar{gap:4px;padding:6px;bottom:calc(8px + env(safe-area-inset-bottom))}
+  .grp{padding:0 3px}.grp .lbl{display:none}
+  .mode{min-width:48px;padding:4px 5px}.mode svg{width:26px;height:19px}.mode small{display:none}
+  .bar button{padding:6px 8px;font-size:12px}
+  body.edit .side{top:auto;left:8px;right:8px;width:auto;bottom:calc(70px + env(safe-area-inset-bottom));max-height:42vh}
+  body.edit #stick{display:none}
+  #stick{width:100px;height:100px;bottom:calc(76px + env(safe-area-inset-bottom))}#knob{left:25px;top:25px}
+}
+#compass{position:fixed;left:50%;top:12px;transform:translateX(-50%);width:46px;height:46px;border-radius:50%;background:var(--bg);border:1px solid var(--line);backdrop-filter:blur(10px);pointer-events:none}
+#compass b{position:absolute;left:0;right:0;top:-2px;text-align:center;font-size:10px;color:#ff7b6b}
+#needle{position:absolute;inset:0}
+#needle i{position:absolute;left:50%;top:7px;width:0;height:0;margin-left:-5px;border:5px solid transparent;border-bottom:16px solid #ff7b6b;border-top:0}
+#needle i::after{content:"";position:absolute;left:-3px;top:16px;width:6px;height:12px;background:#d8dde4;border-radius:0 0 3px 3px}
+#sunpanel{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);width:min(560px,calc(100vw - 20px));background:var(--bg);backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:12px;padding:8px 12px}
+#sunpanel .row{flex-wrap:wrap}
+#btnDayNight{position:fixed;left:calc(50% + 40px);top:14px;z-index:4;padding:8px 14px;border-radius:20px;background:var(--bg);backdrop-filter:blur(10px);font-weight:600}
+#btnDayNight.night{background:#1d2a4a;border-color:#4b6cb7;color:#cfe0ff}
+@media (max-width:760px){#btnDayNight{left:calc(50% + 32px);top:8px;padding:6px 10px;font-size:12px}}
+
+#lightpanel{position:fixed;left:12px;top:290px;width:290px;max-height:52vh;display:flex;flex-direction:column;background:var(--bg);backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:12px;z-index:5}
+#lpHead{display:flex;gap:6px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--line);cursor:grab;touch-action:none}
+#lpHead span{color:var(--mut);font-size:11px;flex:1}#lpHead button{padding:3px 8px;font-size:12px}
+#lpList{overflow:auto;padding:4px 10px 10px}
+.lpRoom{display:flex;gap:6px;align-items:center;font-weight:600;margin-top:8px;font-size:13px}
+.lpRow{display:flex;gap:6px;align-items:center;padding:2px 0 2px 18px;font-size:12.5px}.lpRow span{flex:1}.lpRow button{padding:0 7px}
+@media (max-width:760px){#lightpanel{left:8px;right:8px;width:auto;top:60px;max-height:45vh}}
+
+.gripgrp{padding:0 4px;flex-direction:column;gap:4px;justify-content:center}.gripgrp button{padding:2px 8px;line-height:1.2}
+.grip{cursor:grab;touch-action:none}.grip:active{cursor:grabbing}
+.bar.min{padding:4px;gap:0}.bar.min .grp:not(.gripgrp){display:none}.bar.min .gripgrp{flex-direction:row;border:0}
+.bar.free{transform:none;bottom:auto}
+
+input[type=range]{accent-color:var(--acc)}
+@media (max-width:760px){#sunpanel{bottom:70px}#compass{width:38px;height:38px;top:8px}}
+#toast{position:fixed;left:50%;top:70px;transform:translate(-50%,-10px);background:var(--acc);color:#07230f;font-weight:600;padding:8px 16px;border-radius:20px;opacity:0;pointer-events:none;transition:.25s;z-index:20}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+.snap{display:flex;gap:6px;align-items:center;margin:5px 0;padding:5px 6px;border:1px solid var(--line);border-radius:8px}
+.snap span{flex:1;min-width:0}.snap b{display:block;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.snap small{color:var(--mut);font-size:10px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast"></div>
+
+<div class="top">
+  <h1>Simulador de casa</h1>
+  <div>Vista: <span class="m" id="modename"></span> <button id="btnHelp" style="padding:1px 7px;float:right">?</button></div>
+  <div id="help">
+    <div><b>Clic</b>: caminar hasta ese punto · <b>W A S D</b>: mover al personaje (<b>Shift</b> corre)</div>
+    <div><b>1 2 3 4</b>: modo de paredes · <b>Q / E</b>: girar la cámara 90°</div>
+    <div><b>Clic derecho + arrastrar</b>: girar libre / inclinar · <b>Re Pág / Av Pág</b>: inclinar · <b>H</b>: vista isométrica</div>
+    <div><b>Rueda</b>: zoom · <b>Shift + arrastrar</b> o botón central: mover la vista · <b>Flechas</b>: mover la vista</div>
+    <div><b>L</b>: ver todo el lote · <b>N</b>: día / noche · <b>C</b>: centrar en el personaje · <b>F</b>: seguir</div>
+    <div><b>V</b>: primera persona (arrastrá para mirar, WASD para caminar)</div>
+    <div><b>B</b>: modo edición (mover y rotar muebles)</div>
+  </div>
+</div>
+
+<div class="side">
+  <h2>Modo edición</h2>
+  <div id="selpanel" class="sel hidden">
+    <div>Seleccionado: <b id="selname"></b></div>
+    <div class="row">Rotar de a <input id="step" type="number" min="0.1" max="180" step="any" value="15"> °</div>
+    <div class="row"><button id="rotMinus">⟲ −</button><button id="rotPlus">+ ⟳</button> <span style="color:var(--mut)">(tecla R)</span></div>
+    <div id="sizeRow" class="row">Ancho <input id="sizeW" type="number" step="0.05" min="0.1" max="40"> Largo <input id="sizeD" type="number" step="0.05" min="0.1" max="40"> m</div>
+    <div class="row">Altura sobre el piso <input id="elevY" type="number" step="0.05" min="0" style="width:76px"> m <span style="color:var(--mut);font-size:11px">(0,5 = sobre mesa de luz)</span></div>
+    <div class="row">Alto <input id="sizeH" type="number" step="5" min="20" max="400"> % <button id="sizeReset" style="margin-left:auto">Tamaño original</button></div>
+    <div class="row">Ángulo <input id="angle" type="number" step="any" value="0"> °</div>
+    <div class="row"><button id="btnDup">Duplicar</button><button id="btnDel">Eliminar</button></div>
+  </div>
+  <div class="row"><label><input id="snapPos" type="checkbox" checked> Ajustar posición (5 cm)</label></div>
+  <div class="row"><label><input id="snapRot" type="checkbox" checked> Ajustar giro al paso</label></div>
+  <div class="tip">Arrastrá un mueble para moverlo. Arrastrá la bolita amarilla para rotarlo. Rojo = se superpone con una pared u otro mueble.</div>
+  <div class="row"><button id="btnSave" class="on" style="flex:1">💾 Guardar diseño</button></div>
+  <div class="row"><button id="btnPublish" style="flex:1" title="Descarga diseno.json: copialo junto a index.html y todos los dispositivos lo van a ver">⭐ Dejar como diseño por defecto</button></div>
+  <div id="catalog"></div>
+  <div class="row" style="margin-top:12px"><button id="btnExport" title="Copia el diseño para pegarlo en otro dispositivo">Copiar diseño</button><button id="btnImport">Pegar diseño</button><button id="btnLink">Copiar enlace</button></div>
+  <div class="row" style="margin-top:6px"><button id="btnReset">Volver al diseño por defecto</button></div>
+</div>
+
+<div id="lightpanel" class="hidden">
+  <div id="lpHead"><b>💡 Luces</b><span id="lpCount"></span><button id="lpAllOn" title="Prender todas">Todas</button><button id="lpAllOff" title="Apagar todas">Ninguna</button><button id="lpClose" title="Cerrar">✕</button></div>
+  <div id="lpList"></div>
+</div>
+
+<button id="btnDayNight" title="Cambiar entre día y noche (N)">☀ Día</button>
+<div id="compass" title="Norte"><div id="needle"><i></i></div><b>N</b></div>
+
+<div id="sunpanel" class="hidden">
+  <div class="row"><b id="sunDate"></b><span id="sunTime" style="font-size:18px;font-weight:600;color:var(--acc)"></span><span id="sunInfo" style="color:var(--mut)"></span></div>
+  <div class="row"><span style="width:44px;color:var(--mut)">Fecha</span><input id="sunDay" type="range" min="1" max="365" step="1" style="flex:1"></div>
+  <div class="row"><span style="width:44px;color:var(--mut)">Hora</span><input id="sunHour" type="range" min="0" max="24" step="0.05" style="flex:1"></div>
+  <div class="row"><button data-hour="14">☀ Día</button><button data-hour="22">🌙 Noche</button></div>
+  <div class="row"><button data-doy="355">Verano (21 dic)</button><button data-doy="80">Equinoccio (21 mar)</button><button data-doy="172">Invierno (21 jun)</button><button id="sunPlay">▶ Recorrer el día</button></div>
+</div>
+
+<div id="stick"><div id="knob"></div></div>
+
+<div class="bar" id="bar">
+  <div class="grp gripgrp"><button id="barGrip" class="grip" title="Arrastrar la barra">⠿</button><button id="barMin" title="Minimizar / expandir la barra">▾</button></div>
+  <div class="grp"><span class="lbl">Paredes</span>
+    <button class="mode" data-mode="1" title="1 · Sin paredes"><svg viewBox="0 0 34 24"><rect x="3" y="18" width="28" height="3" fill="currentColor"/><rect x="3" y="6" width="28" height="12" fill="none" stroke="currentColor" stroke-dasharray="2 2" opacity=".5"/></svg><small>Sin paredes</small></button>
+    <button class="mode" data-mode="2" title="2 · Paredes recortadas"><svg viewBox="0 0 34 24"><path d="M3 21V4h12v17M19 21v-6h12v6" fill="none" stroke="currentColor" stroke-width="3"/></svg><small>Recortadas</small></button>
+    <button class="mode" data-mode="3" title="3 · Paredes enteras"><svg viewBox="0 0 34 24"><rect x="4" y="4" width="26" height="17" fill="none" stroke="currentColor" stroke-width="3"/></svg><small>Enteras</small></button>
+    <button class="mode" data-mode="4" title="4 · Con tejado"><svg viewBox="0 0 34 24"><path d="M2 11 17 3l15 8M6 10v11h22V10" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"/></svg><small>Con tejado</small></button>
+  </div>
+  <div class="grp"><span class="lbl">Personaje</span>
+    <button id="btnCenter" title="Centrar en el personaje (C)">Centrar</button><button id="btnFollow" title="Seguir al personaje (F)">Seguir</button>
+    <button id="btnFP" title="Primera persona (V)">1ª persona</button>
+    <button id="btnNeigh" class="on" title="Mostrar las paredes de los vecinos">Vecinos</button>
+    <button id="btnLabels" class="on" title="Mostrar nombres de ambientes">Nombres</button>
+    <button id="btnLightPanel" title="Panel para prender y apagar cada luz">Panel de luces</button>
+    <button id="btnLights" title="Luces de los muebles: automático (de noche) / siempre / apagadas">💡 Luces: auto</button>
+  </div>
+  <div class="grp"><button id="btnSun" title="Luz solar según fecha y hora">☀ Sol</button></div>
+  <div class="grp"><button id="btnEdit" title="Modo edición (B)">✎ Editar muebles</button></div>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

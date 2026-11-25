@@ -2,6 +2,7 @@
 
 Simulador 3D de una casa **ficticia**, hecho con el plugin `casa-virtual` para Claude Code.
 
+- **En vivo:** https://casavirtual.vercel.app/ (casa completa) y https://casavirtual.vercel.app/sol/ (estudio de sol).
 - `/` — casa completa: ambientes, muebles, luces, sol y sombras (con edificios vecinos y uno al frente).
 - `/sol/` — estudio de sol: solo el terreno y un volumen, para decidir la orientación y la distribución **antes** de diseñar.
 
